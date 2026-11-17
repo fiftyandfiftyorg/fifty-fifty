@@ -38,7 +38,7 @@ export const scrollIn = function (gsapContext) {
   const ANIMATE_TEXT_DEFAULT = false;
   // Site-wide floor. Set to e.g. 0.35 to make every scroll-in SEO-safe
   // without touching a single element in Webflow.
-  const OPACITY_START_DEFAULT = 0;
+  const OPACITY_START_DEFAULT = 1;
 
   //resuable timeline creation with option attributes for individual customization per element
   const scrollInTL = function (item) {
@@ -85,7 +85,7 @@ export const scrollIn = function (gsapContext) {
       // autoAlpha 0 also sets visibility:hidden; any value above 0 leaves
       // the element visible to a renderer that never scrolls.
       autoAlpha: options.opacityStart !== undefined ? options.opacityStart : OPACITY_START_DEFAULT,
-      y: '2rem',
+      y: '1rem',
     };
     const varsTo = {
       autoAlpha: 1,
