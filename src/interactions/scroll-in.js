@@ -36,7 +36,7 @@ export const scrollIn = function (gsapContext) {
   const EASE = 'power1.out';
   // Site-wide floor. Set to e.g. 0.35 to make every scroll-in SEO-safe
   // without touching a single element in Webflow.
-  const OPACITY_START_DEFAULT = 0.35;
+  const OPACITY_START_DEFAULT = 0;
 
   //resuable timeline creation with option attributes for individual customization per element
   const scrollInTL = function (item) {

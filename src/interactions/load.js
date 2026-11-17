@@ -62,7 +62,7 @@ export const load = function (gsapContext) {
 
     // Site-wide floor. Set to e.g. 0.35 to make every load animation safe.
     // Must be kept in step with the page-head CSS documented above.
-    const OPACITY_START_DEFAULT = 0.35;
+    const OPACITY_START_DEFAULT = 0;
     const getOpacityStart = function (el) {
       const raw = el && el.getAttribute ? el.getAttribute(OPACITY_START) : null;
       const parsed = parseFloat(raw);
