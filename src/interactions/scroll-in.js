@@ -24,12 +24,19 @@ export const scrollIn = function (gsapContext) {
   const SCROLL_END = 'data-ix-scrollin-end';
   const CLIP_DIRECTION = 'data-ix-scrollin-clip-direction';
   const SCROLL_STAGGER = 'data-ix-scrollin-stagger';
+  // starting opacity for the fade. 0 reproduces the historic behaviour.
+  // Any value above 0 keeps the element rendered and readable before the
+  // animation runs, so crawlers and no-JS visitors still see the content.
+  const OPACITY_START = 'data-ix-scrollin-opacity-start';
 
   // DEFAULTS
   const EASE_SMALL = 0.1;
   const EASE_LARGE = 0.3;
   const DURATION = 0.6;
   const EASE = 'power1.out';
+  // Site-wide floor. Set to e.g. 0.35 to make every scroll-in SEO-safe
+  // without touching a single element in Webflow.
+  const OPACITY_START_DEFAULT = 0.35;
 
   //resuable timeline creation with option attributes for individual customization per element
   const scrollInTL = function (item) {
@@ -61,10 +68,21 @@ export const scrollIn = function (gsapContext) {
     return tl;
   };
 
+  // read a per-element opacity floor, falling back to the site-wide default
+  const getOpacityStart = function (el) {
+    const raw = el && el.getAttribute ? el.getAttribute(OPACITY_START) : null;
+    const parsed = parseFloat(raw);
+    if (!Number.isFinite(parsed)) return OPACITY_START_DEFAULT;
+    // clamp: above 1 is meaningless, below 0 would re-hide the element
+    return Math.min(Math.max(parsed, 0), 1);
+  };
+
   //resuable timeline creation with option attributes for individual customization per element
   const defaultTween = function (item, tl, options = {}) {
     const varsFrom = {
-      autoAlpha: 0,
+      // autoAlpha 0 also sets visibility:hidden; any value above 0 leaves
+      // the element visible to a renderer that never scrolls.
+      autoAlpha: options.opacityStart !== undefined ? options.opacityStart : OPACITY_START_DEFAULT,
       y: '2rem',
     };
     const varsTo = {
@@ -90,6 +108,8 @@ export const scrollIn = function (gsapContext) {
   };
 
   const scrollInHeading = function (item) {
+    // read before any reassignment below - the attribute lives on the original element
+    const opacityStart = getOpacityStart(item);
     //check if item is rich text
     if (item.classList.contains('w-richtext')) {
       item = item.firstChild;
@@ -107,7 +127,7 @@ export const scrollIn = function (gsapContext) {
         // animation to run for the item
         const tl = scrollInTL(item);
 
-        tween = defaultTween(self.lines, tl, { stagger: 0.2 });
+        tween = defaultTween(self.lines, tl, { stagger: 0.2, opacityStart: opacityStart });
         //create callback function to revert text
         const revertText = function (self) {
           self.revert();
@@ -122,6 +142,7 @@ export const scrollIn = function (gsapContext) {
 
   const scrollInItem = function (item) {
     if (!item) return;
+    const opacityStart = getOpacityStart(item);
     //check if item is rich text and if it is apply animation to each child
     if (item.classList.contains('w-richtext')) {
       //get the children of the item
@@ -129,11 +150,11 @@ export const scrollIn = function (gsapContext) {
       if (children.length === 0) return;
       children.forEach((child) => {
         const tl = scrollInTL(child);
-        const tween = defaultTween(child, tl);
+        const tween = defaultTween(child, tl, { opacityStart: opacityStart });
       });
     } else {
       const tl = scrollInTL(item);
-      const tween = defaultTween(item, tl);
+      const tween = defaultTween(item, tl, { opacityStart: opacityStart });
     }
   };
 
@@ -148,7 +169,7 @@ export const scrollIn = function (gsapContext) {
     tl.fromTo(
       item,
       {
-        opacity: 0,
+        opacity: getOpacityStart(item),
       },
       {
         opacity: 1,

@@ -1,6 +1,17 @@
 import { attr, checkBreakpoints, runSplit } from '../utilities';
 /* CSS in PAGE Head
 
+NOTE: this CSS lives in the Webflow page head, NOT in this file. Changing this
+comment does nothing on its own - the site's custom code must be edited too.
+
+`visibility: hidden` here means content is hidden BEFORE any JS runs, and is
+only revealed when the load timeline reaches it. If the timeline never reaches
+an element, that element stays invisible permanently - to visitors and to
+crawlers alike. Using an opacity floor instead keeps the content rendered and
+readable in every failure mode, while still allowing the fade-in.
+
+CURRENT (hides content until JS succeeds):
+
 [data-ix-load="wrap"]:not([data-ix-load-run="false"]) {
 	visibility: hidden;
 }
@@ -8,6 +19,16 @@ import { attr, checkBreakpoints, runSplit } from '../utilities';
 	visibility: hidden;
 }
 html:is(.w-editor, .gsap-not-found) :is([data-ix-load-run], [data-ix-load]){visibility: visible;} 
+
+RECOMMENDED (content always rendered; match the value to OPACITY_START_DEFAULT):
+
+[data-ix-load="wrap"]:not([data-ix-load-run="false"]) {
+	opacity: .35;
+}
+[data-ix-load="wrap"]:not([data-ix-load-run="false"]) :is([data-ix-load]:not([data-ix-load-run="false"]), [data-ix-load="stagger"]:not([data-ix-load-run="false"])  > *) {
+	opacity: .35;
+}
+html:is(.w-editor, .gsap-not-found) :is([data-ix-load-run], [data-ix-load]){opacity: 1;} 
 */
 
 export const load = function (gsapContext) {
@@ -15,6 +36,10 @@ export const load = function (gsapContext) {
   const ANIMATION_ID = 'load';
   // hero animation attribute
   const ATTRIBUTE = 'data-ix-load';
+  // starting opacity for the fade. 0 reproduces the historic behaviour and
+  // hides the element outright (autoAlpha 0 also sets visibility:hidden).
+  // Any value above 0 keeps it rendered if the timeline never reaches it.
+  const OPACITY_START = 'data-ix-load-opacity-start';
   // hero animation selectors
   const WRAP = 'wrap';
   const HEADING = 'heading';
@@ -34,6 +59,16 @@ export const load = function (gsapContext) {
     //check breakpoints and exit if set to false
     let runOnBreakpoint = checkBreakpoints(wrap, ANIMATION_ID, gsapContext);
     if (runOnBreakpoint === false) return;
+
+    // Site-wide floor. Set to e.g. 0.35 to make every load animation safe.
+    // Must be kept in step with the page-head CSS documented above.
+    const OPACITY_START_DEFAULT = 0.35;
+    const getOpacityStart = function (el) {
+      const raw = el && el.getAttribute ? el.getAttribute(OPACITY_START) : null;
+      const parsed = parseFloat(raw);
+      if (!Number.isFinite(parsed)) return OPACITY_START_DEFAULT;
+      return Math.min(Math.max(parsed, 0), 1);
+    };
 
     //get all items within the section
     const items = [...wrap.querySelectorAll(`[${ATTRIBUTE}]:not([${ATTRIBUTE}-run="false"])`)];
@@ -58,6 +93,8 @@ export const load = function (gsapContext) {
 
     //h1 load tween
     const loadHeading = function (item) {
+      // read before the richtext reassignment below
+      const opacityStart = getOpacityStart(item);
       //reset items autoAlpha
       gsap.set(item, { autoAlpha: 1 });
       //get timeline positions
@@ -80,7 +117,7 @@ export const load = function (gsapContext) {
             {
               y: '50%',
               rotateX: 45,
-              autoAlpha: 0,
+              autoAlpha: opacityStart,
               stagger: 0.2,
             },
             position
@@ -92,7 +129,7 @@ export const load = function (gsapContext) {
     const loadImage = function (item) {
       // get the position attribute or set defautl position
       const position = attr(DEFAULT_STAGGER, item.getAttribute(POSITION));
-      tl.fromTo(item, { autoAlpha: 0 }, { autoAlpha: 1 }, position);
+      tl.fromTo(item, { autoAlpha: getOpacityStart(item) }, { autoAlpha: 1 }, position);
     };
     //images load tween
     const loadLine = function (item) {
@@ -109,7 +146,12 @@ export const load = function (gsapContext) {
     const loadItem = function (item) {
       // get the position attribute
       const position = attr(DEFAULT_STAGGER, item.getAttribute(POSITION));
-      tl.fromTo(item, { autoAlpha: 0, y: '2rem' }, { autoAlpha: 1, y: '0rem' }, position);
+      tl.fromTo(
+        item,
+        { autoAlpha: getOpacityStart(item), y: '2rem' },
+        { autoAlpha: 1, y: '0rem' },
+        position
+      );
     };
 
     //add item tween to each element in this parent
@@ -134,7 +176,7 @@ export const load = function (gsapContext) {
       tl.fromTo(
         item,
         {
-          autoAlpha: 0,
+          autoAlpha: getOpacityStart(item),
         },
         {
           autoAlpha: 1,
