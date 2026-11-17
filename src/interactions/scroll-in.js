@@ -24,6 +24,7 @@ export const scrollIn = function (gsapContext) {
   const SCROLL_END = 'data-ix-scrollin-end';
   const CLIP_DIRECTION = 'data-ix-scrollin-clip-direction';
   const SCROLL_STAGGER = 'data-ix-scrollin-stagger';
+  const TEXT_OPT_IN = 'data-ix-scrollin-text';
   // starting opacity for the fade. 0 reproduces the historic behaviour.
   // Any value above 0 keeps the element rendered and readable before the
   // animation runs, so crawlers and no-JS visitors still see the content.
@@ -34,6 +35,7 @@ export const scrollIn = function (gsapContext) {
   const EASE_LARGE = 0.3;
   const DURATION = 0.6;
   const EASE = 'power1.out';
+  const ANIMATE_TEXT_DEFAULT = false;
   // Site-wide floor. Set to e.g. 0.35 to make every scroll-in SEO-safe
   // without touching a single element in Webflow.
   const OPACITY_START_DEFAULT = 0;
@@ -250,6 +252,14 @@ export const scrollIn = function (gsapContext) {
   //   });
   // };
 
+  const shouldAnimateText = function (item, wrap) {
+    const own = item && item.getAttribute ? item.getAttribute(TEXT_OPT_IN) : null;
+    if (own !== null && own !== '') return own === 'true';
+    const up = wrap && wrap.getAttribute ? wrap.getAttribute(TEXT_OPT_IN) : null;
+    if (up !== null && up !== '') return up === 'true';
+    return ANIMATE_TEXT_DEFAULT;
+  };
+
   //get sections
   const wraps = [...document.querySelectorAll(`[${ATTRIBUTE}="${WRAP}"]`)];
   if (wraps.length === 0) return;
@@ -271,14 +281,15 @@ export const scrollIn = function (gsapContext) {
       if (!item) return;
       //find the type of the scrolling animation
       const scrollInType = item.getAttribute(ELEMENT);
-      if (scrollInType === HEADING) {
+      const textOk = shouldAnimateText(item, wrap);
+      if (scrollInType === HEADING && textOk) {
         if (isMobile) {
           scrollInItem(item);
         } else {
           scrollInHeading(item);
         }
       }
-      if (scrollInType === ITEM) {
+      if (scrollInType === ITEM && textOk) {
         scrollInItem(item);
       }
       if (scrollInType === IMAGE) {
