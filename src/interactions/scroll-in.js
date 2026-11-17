@@ -31,14 +31,15 @@ export const scrollIn = function (gsapContext) {
   const OPACITY_START = 'data-ix-scrollin-opacity-start';
 
   // DEFAULTS
-  const EASE_SMALL = 0.1;
-  const EASE_LARGE = 0.3;
-  const DURATION = 0.6;
-  const EASE = 'power1.out';
+  const EASE_SMALL = 0.04;
+  const EASE_LARGE = 0.07;
+  const DURATION = 0.45;
+  const EASE = 'power2.out';
+  const TWEENED_CLASS = 'ix-scrollin-tweened';
   const ANIMATE_TEXT_DEFAULT = false;
   // Site-wide floor. Set to e.g. 0.35 to make every scroll-in SEO-safe
   // without touching a single element in Webflow.
-  const OPACITY_START_DEFAULT = 1;
+  const OPACITY_START_DEFAULT = 0;
 
   //resuable timeline creation with option attributes for individual customization per element
   const scrollInTL = function (item) {
@@ -84,11 +85,11 @@ export const scrollIn = function (gsapContext) {
     const varsFrom = {
       // autoAlpha 0 also sets visibility:hidden; any value above 0 leaves
       // the element visible to a renderer that never scrolls.
-      autoAlpha: options.opacityStart !== undefined ? options.opacityStart : OPACITY_START_DEFAULT,
-      y: '1rem',
+      opacity: options.opacityStart !== undefined ? options.opacityStart : OPACITY_START_DEFAULT,
+      y: '1.5rem',
     };
     const varsTo = {
-      autoAlpha: 1,
+      opacity: 1,
       y: '0rem',
     };
     //optional adjustments to the tween
@@ -106,6 +107,8 @@ export const scrollIn = function (gsapContext) {
 
     // putting tween together
     const tween = tl.fromTo(item, varsFrom, varsTo);
+    const marked = item && item.tagName ? [item] : Array.prototype.slice.call(item || []);
+    marked.forEach(function (el) { if (el && el.classList) el.classList.add(TWEENED_CLASS); });
     return tween;
   };
 
@@ -129,7 +132,7 @@ export const scrollIn = function (gsapContext) {
         // animation to run for the item
         const tl = scrollInTL(item);
 
-        tween = defaultTween(self.lines, tl, { stagger: 0.2, opacityStart: opacityStart });
+        tween = defaultTween(self.lines, tl, { stagger: 0.05, opacityStart: opacityStart });
         //create callback function to revert text
         const revertText = function (self) {
           self.revert();
@@ -309,4 +312,35 @@ export const scrollIn = function (gsapContext) {
       // }
     });
   });
+
+  // RESCUE PASS
+  // An element whose ScrollTrigger never fires keeps its from-state forever.
+  // Usual cause: trigger points computed before webfonts and images settled.
+  // refresh() fixes the cause; the clearProps sweep is the backstop. Only
+  // elements already above the fold are rescued - one below it is waiting
+  // its turn, not stuck.
+  const refreshTriggers = function () {
+    const ST = window.ScrollTrigger || (window.gsap && window.gsap.ScrollTrigger);
+    if (ST && typeof ST.refresh === 'function') ST.refresh();
+  };
+
+  const rescueStuck = function () {
+    document.querySelectorAll('.' + TWEENED_CLASS).forEach(function (el) {
+      const cs = window.getComputedStyle(el);
+      if (parseFloat(cs.opacity) > 0.99 && cs.visibility !== 'hidden') return;
+      if (el.getBoundingClientRect().top > window.innerHeight) return;
+      gsap.set(el, { clearProps: 'opacity,visibility,transform' });
+    });
+  };
+
+  const onReady = function () {
+    refreshTriggers();
+    window.setTimeout(function () { refreshTriggers(); rescueStuck(); }, 1200);
+  };
+
+  if (document.readyState === 'complete') {
+    onReady();
+  } else {
+    window.addEventListener('load', onReady, { once: true });
+  }
 };
