@@ -88,23 +88,34 @@ export const slideshow = function (gsapContext) {
 
     if (hasCaptions) {
       const root = wrap.parentElement;
-      const target = root
-        ? root.querySelector('[' + ATTRIBUTE + '="' + CAPTION_TARGET + '"]') ||
-          root.querySelector('.u-btn-group')
+      // An element authored in Webflow wins: it is real markup, in the page
+      // source, styled by the design system. Only fall back to building one.
+      const explicit = root
+        ? root.querySelector('[' + ATTRIBUTE + '="' + CAPTION_TARGET + '"]')
         : null;
 
-      // fail silent: if the header markup changes, leave the page alone
-      if (target) {
-        injectCaptionCSS();
-        const existing = target.querySelector('.ix-slideshow-cap');
-        if (existing) existing.remove();
+      if (explicit) {
+        capEl = explicit;
+        capTxt = explicit.querySelector('[' + ATTRIBUTE + '="caption-text"]') || explicit;
+      } else {
+        const target = root ? root.querySelector('.u-btn-group') : null;
+        // fail silent: if the header markup changes, leave the page alone
+        if (target) {
+          injectCaptionCSS();
+          const existing = target.querySelector('.ix-slideshow-cap');
+          if (existing) existing.remove();
 
-        capEl = document.createElement(links.some((l) => l !== '') ? 'a' : 'span');
-        capEl.className = 'ix-slideshow-cap';
-        capEl.setAttribute('aria-live', 'polite');
-        capEl.innerHTML = CAMERA_SVG + '<span class="ix-slideshow-cap__txt"></span>';
-        capTxt = capEl.querySelector('.ix-slideshow-cap__txt');
-        target.appendChild(capEl);
+          capEl = document.createElement(links.some((l) => l !== '') ? 'a' : 'span');
+          capEl.className = 'ix-slideshow-cap';
+          capEl.setAttribute('aria-live', 'polite');
+          capEl.innerHTML = CAMERA_SVG + '<span class="ix-slideshow-cap__txt"></span>';
+          capTxt = capEl.querySelector('.ix-slideshow-cap__txt');
+          target.appendChild(capEl);
+          // The load-flicker rule hides children of a stagger group until the
+          // load animation reveals them. This element is appended after that
+          // animation has collected its targets, so it would never be revealed.
+          capEl.style.visibility = 'visible';
+        }
       }
     }
 
@@ -122,18 +133,23 @@ export const slideshow = function (gsapContext) {
           }
         }
         // a slide with no caption should show nothing, not the previous one
-        capEl.style.visibility = text ? '' : 'hidden';
+        capEl.style.visibility = text ? 'visible' : 'hidden';
       };
       if (!animate) {
         write();
         return;
       }
-      capEl.classList.add('is-swapping');
-      setTimeout(function () {
-        write();
-        capEl.classList.remove('is-swapping');
-      }, CAPTION_FADE);
+      gsap.to(capTxt, {
+        opacity: 0,
+        duration: CAPTION_FADE / 1000,
+        ease: EASE,
+        onComplete: function () {
+          write();
+          gsap.to(capTxt, { opacity: 1, duration: CAPTION_FADE / 1000, ease: EASE });
+        },
+      });
     };
+
     // -----------------------------------------------------------------------
 
     // The outgoing slide stays fully opaque while the incoming one fades in above
