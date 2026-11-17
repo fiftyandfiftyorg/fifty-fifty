@@ -9,6 +9,7 @@ import { load } from './interactions/load';
 import { marquee } from './interactions/marquee';
 import { parallax } from './interactions/parallax';
 import { scrollIn } from './interactions/scroll-in';
+import { slideshow } from './interactions/slideshow';
 import { scrolling } from './interactions/scrolling';
 import { sliderComponent } from './interactions/slider';
 
@@ -342,6 +343,7 @@ document.addEventListener('DOMContentLoaded', function () {
           countUp(gsapContext);
           // parallax(gsapContext);
           scrollIn(gsapContext);
+          slideshow(gsapContext);
           scrolling(gsapContext);
           videoScroll(gsapContext);
         }
