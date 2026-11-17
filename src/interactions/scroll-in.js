@@ -33,6 +33,11 @@ export const scrollIn = function (gsapContext) {
   // DEFAULTS
   const EASE_SMALL = 0.04;
   const EASE_LARGE = 0.07;
+  // Per-element data-ix-scrollin-stagger wins over EASE_LARGE. Webflow stamps
+  // 0.3 onto the card grids, authored against the old timing scale, so those
+  // grids ignored the new default entirely. Cap it here: one release fixes
+  // every page, including ones not swept yet.
+  const MAX_STAGGER = 0.08;
   const DURATION = 0.45;
   const EASE = 'power2.out';
   const TWEENED_CLASS = 'ix-scrollin-tweened';
@@ -226,7 +231,10 @@ export const scrollIn = function (gsapContext) {
 
   const scrollInStagger = function (item) {
     if (!item) return;
-    const staggerAmount = attr(EASE_LARGE, item.getAttribute(SCROLL_STAGGER));
+    const staggerRaw = attr(EASE_LARGE, item.getAttribute(SCROLL_STAGGER));
+    const staggerAmount = Number.isFinite(staggerRaw)
+      ? Math.min(staggerRaw, MAX_STAGGER)
+      : EASE_LARGE;
     // get the children of the item  without display contents
     let children = getNonContentsChildren(item);
     // const children = gsap.utils.toArray(item.children);
